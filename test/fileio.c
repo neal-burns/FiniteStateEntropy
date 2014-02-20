@@ -310,6 +310,11 @@ int compress_file(char* output_filename, char* input_filename)
         XXH32_update(hashCtx, in_buff, (int)inSize);
         DISPLAYLEVEL(3, "\rRead : %i MB   ", (int)(filesize>>20));
 
+        extern int stats_block_data_bytes;
+        extern int stats_block_overhead_bytes;
+        extern int stats_block_uncompressed_size;
+        extern double stats_block_entropy;
+
         // Compress Blocks
         {
             const char* ip = in_buff;
@@ -319,10 +324,21 @@ int compress_file(char* output_filename, char* input_filename)
             *(BYTE*)out_buff = (BYTE)nbFullBlocks;
             for (i=0; i<nbFullBlocks; i++)
             {
-                int errorCode = compressionFunction(op, (unsigned char*)ip, (int)inputBlockSize);
+                int errorCode;
+
+                stats_block_data_bytes = 0;
+                stats_block_overhead_bytes = 0;
+                stats_block_uncompressed_size = 0;
+                stats_block_entropy = 0.0;
+
+                errorCode = compressionFunction(op, (unsigned char*)ip, (int)inputBlockSize);
                 if (errorCode==-1) EXM_THROW(22, "Compression error");
                 op += errorCode;
                 ip += inputBlockSize;
+
+                fputs("Block stats:", stderr);
+                fprintf(stderr, "%d -> %d head + %d data\n", stats_block_uncompressed_size, stats_block_overhead_bytes, stats_block_data_bytes);
+                fprintf(stderr, "ideal = %.2f bytes\n", stats_block_entropy/8.0);
             }
             if (((nbFullBlocks * inputBlockSize) < inSize) || (!inSize))  // last Block
             {

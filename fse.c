@@ -660,6 +660,11 @@ typedef struct
     FSE_symbolCompressionTransform symbolTT[FSE_MAX_NB_SYMBOLS];   // Also used by FSE_compressU16
 } CTable_max_t;
 
+int stats_block_data_bytes;
+int stats_block_overhead_bytes;
+int stats_block_uncompressed_size;
+double stats_block_entropy;
+
 int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int nbSymbols, int tableLog)
 {
     const BYTE* const istart = (const BYTE*) source;
@@ -683,6 +688,13 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     if (errorCode==1) return FSE_writeSingleChar (ostart, *istart);   // Only 0 is present
     nbSymbols = errorCode;
 
+    int i;
+    for(i=0; i<nbSymbols; i++) {
+        if(counting[i] > 0) {
+            stats_block_entropy += log2((double)sourceSize / (double)counting[i]) * counting[i];
+        }
+    }
+
     errorCode = FSE_normalizeCount (counting, tableLog, counting, sourceSize, nbSymbols);
     if (errorCode==-1) return -1;
     if (errorCode==0) return FSE_writeSingleChar (ostart, *istart);
@@ -693,10 +705,15 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     if (errorCode==-1) return -1;
     op += errorCode;
 
+    stats_block_overhead_bytes = op - ostart;
+
     // Compress
     errorCode = FSE_buildCTable (&CTable, counting, nbSymbols, tableLog);
     if (errorCode==-1) return -1;
     op += FSE_compress_usingCTable (op, ip, sourceSize, &CTable);
+
+    stats_block_data_bytes = (int)(op - ostart) - stats_block_overhead_bytes;
+    stats_block_uncompressed_size = sourceSize;
 
     // check compressibility
     if ( (op-ostart) >= (sourceSize-1) ) return FSE_noCompression (ostart, istart, sourceSize);
