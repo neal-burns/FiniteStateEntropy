@@ -415,27 +415,13 @@ int FSE_sizeof_CTable (int nbSymbols, int tableLog)
 }
 
 #define FSE_TABLESTEP(tableSize) ((tableSize>>1) + (tableSize>>3) + 3)
-int FSE_buildCTable (void* CTable, const unsigned int* normalizedCounter, int nbSymbols, int tableLog)
+int FSE_spreadSymbols8(BYTE* tableSymbolByte, const unsigned int* normalizedCounter, int nbSymbols, int tableLog)
 {
-    const int tableSize = 1 << tableLog;
-    const int tableMask = tableSize - 1;
-    U16* tableU16 = ( (U16*) CTable) + 2;
-    FSE_symbolCompressionTransform* symbolTT = (FSE_symbolCompressionTransform*) (tableU16 + tableSize);
-    const int step = FSE_TABLESTEP(tableSize);
-    int cumul[FSE_MAX_NB_SYMBOLS_CHAR+1];
-    U32 position = 0;
-    BYTE tableSymbolByte[FSE_MAX_TABLESIZE];
     int s;
-    int i;
-
-    // header
-    tableU16[-2] = (U16) tableLog;
-    tableU16[-1] = (U16) nbSymbols;
-
-    // symbol start positions
-    cumul[0] = 0;
-    for (i=1; i<nbSymbols; i++) cumul[i] = cumul[i-1] + normalizedCounter[i-1];
-    cumul[nbSymbols] = tableSize+1;
+    const int tableSize = 1 << tableLog;
+    const int step = FSE_TABLESTEP(tableSize);
+    const int tableMask = tableSize - 1;
+    U32 position = 0;
 
     // Spread symbols
     for (s=0; s<nbSymbols; s++)
@@ -449,6 +435,31 @@ int FSE_buildCTable (void* CTable, const unsigned int* normalizedCounter, int nb
     }
 
     if (position!=0) return -1;   // Must have gone through all positions, otherwise normalizedCount is not correct
+
+    return 0;
+}
+
+int FSE_buildCTable (void* CTable, const unsigned int* normalizedCounter, int nbSymbols, int tableLog)
+{
+    const int tableSize = 1 << tableLog;
+    U16* tableU16 = ( (U16*) CTable) + 2;
+    FSE_symbolCompressionTransform* symbolTT = (FSE_symbolCompressionTransform*) (tableU16 + tableSize);
+    int cumul[FSE_MAX_NB_SYMBOLS_CHAR+1];
+    BYTE tableSymbolByte[FSE_MAX_TABLESIZE];
+    int errorCode;
+    int i;
+
+    // header
+    tableU16[-2] = (U16) tableLog;
+    tableU16[-1] = (U16) nbSymbols;
+
+    // symbol start positions
+    cumul[0] = 0;
+    for (i=1; i<nbSymbols; i++) cumul[i] = cumul[i-1] + normalizedCounter[i-1];
+    cumul[nbSymbols] = tableSize+1;
+
+    errorCode = FSE_spreadSymbols8(tableSymbolByte, normalizedCounter, nbSymbols, tableLog);
+    if(errorCode == -1) return -1;
 
     // Build table
     for (i=0; i<tableSize; i++)
@@ -663,28 +674,23 @@ int FSE_buildDTable (void* DTable, const unsigned int* const normalizedCounter, 
 {
     FSE_decode_t* const tableDecode = (FSE_decode_t*) DTable;
     const U32 tableSize = 1 << tableLog;
-    const U32 tableMask = tableSize-1;
-    const U32 step = FSE_TABLESTEP(tableSize);
     U32 symbolNext[FSE_MAX_NB_SYMBOLS_CHAR];
     U32 position = 0;
+    BYTE tableSymbolByte[FSE_MAX_TABLESIZE];
     int s;
+    int errorCode;
 
     // Checks
     if (nbSymbols > FSE_MAX_NB_SYMBOLS_CHAR) return -1;
     if (tableLog > FSE_MAX_TABLELOG) return -1;
 
-    // Spread symbols
-    for (s=0; s<nbSymbols; s++)
-    {
-        U32 i;
-        for (i=0; i<normalizedCounter[s]; i++)
-        {
-            tableDecode[position].symbol = (BYTE)s;
-            position = (position + step) & tableMask;
-        }
-    }
+    errorCode = FSE_spreadSymbols8(tableSymbolByte, normalizedCounter, nbSymbols, tableLog);
+    if(errorCode == -1) return -1;
 
-    if (position!=0) return -1;   // position must use all positions, otherwise normalizedCounter is incorrect
+    for (position=0; position<tableSize; position++)
+    {
+        tableDecode[position].symbol = tableSymbolByte[position];
+    }
 
     // Calculate symbol next
     for (s=0; s<nbSymbols; s++) symbolNext[s] = normalizedCounter[s];   // Objective : don't modify normalizedCounter
