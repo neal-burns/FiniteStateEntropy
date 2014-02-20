@@ -439,6 +439,29 @@ int FSE_spreadSymbols8(BYTE* tableSymbolByte, const unsigned int* normalizedCoun
     return 0;
 }
 
+int FSE_spreadSymbols16(U16* tableSymbolU16, const int* symbolPos, int tableLog)
+{
+    const int tableSize = 1 << tableLog;
+    const int tableMask = tableSize - 1;
+    const int step = FSE_TABLESTEP(tableSize);
+    U32 position = 0;
+    U16 s;
+    int i;
+
+    // Spread symbols
+    s=0;
+    while (!symbolPos[s+1]) s++;
+    for (i=0; i<tableSize; i++)
+    {
+        tableSymbolU16[position] = s;
+        while (i+2 > symbolPos[s+1])
+            s++;
+        position = (position + step) & tableMask;
+    }
+
+    return 0;
+}
+
 int FSE_buildCTable (void* CTable, const unsigned int* normalizedCounter, int nbSymbols, int tableLog)
 {
     const int tableSize = 1 << tableLog;
@@ -936,14 +959,10 @@ static int FSE_countU16 (unsigned int* count, const unsigned short* source, int 
 static int FSE_buildCTableU16 (void* CTable, const unsigned int* normalizedCounter, int nbSymbols, int tableLog)
 {
     const int tableSize = 1 << tableLog;
-    const int tableMask = tableSize - 1;
     U16* tableU16 = ( (U16*) CTable) + 2;
     FSE_symbolCompressionTransform* const symbolTT = (FSE_symbolCompressionTransform*) (tableU16 + tableSize);
-    const int step = FSE_TABLESTEP(tableSize);
     int symbolPos[FSE_MAX_NB_SYMBOLS+1];
-    U32 position = 0;
     U16 tableSymbolU16[FSE_MAX_TABLESIZE];
-    U16 s;
     int i;
 
     // header
@@ -958,6 +977,7 @@ static int FSE_buildCTableU16 (void* CTable, const unsigned int* normalizedCount
     }
     symbolPos[nbSymbols] = tableSize+1;
 
+#if 0
     // Spread symbols
     s=0;
     while (!symbolPos[s+1]) s++;
@@ -968,6 +988,8 @@ static int FSE_buildCTableU16 (void* CTable, const unsigned int* normalizedCount
             s++;
         position = (position + step) & tableMask;
     }
+#endif
+    FSE_spreadSymbols16(tableSymbolU16, symbolPos, tableLog);
 
     // Build table
     for (i=0; i<tableSize; i++)
