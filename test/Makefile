@@ -26,7 +26,8 @@
 RELEASE=v0.1
 DESTDIR=
 CC=gcc
-CFLAGS=-I.. -std=c99 -Wall -W -Wundef
+CFLAGS=-I.. -std=c99 -Wall -W -Wundef -DSPREADFUNC=custom_spread 
+#CFLAGS=-I.. -std=c99 -Wall -W -Wundef
 CF32=-m32 -march=pentiumpro
 
 # Define *.exe as extension for Windows systems
@@ -41,7 +42,7 @@ default: fse
 
 all: fse fse32 fuzzer probagen
 
-fse: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c zlibh.c ../fse.c
+fse: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c zlibh.c custom_spread.c ../fse.c
 	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
 
 fse32: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c zlibh.c ../fse.c

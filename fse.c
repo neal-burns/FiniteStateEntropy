@@ -423,6 +423,8 @@ int FSE_spreadSymbols8(BYTE* tableSymbolByte, const unsigned int* normalizedCoun
     const int tableMask = tableSize - 1;
     U32 position = 0;
 
+#if !defined(SPREADFUNC)
+
     // Spread symbols
     for (s=0; s<nbSymbols; s++)
     {
@@ -435,6 +437,23 @@ int FSE_spreadSymbols8(BYTE* tableSymbolByte, const unsigned int* normalizedCoun
     }
 
     if (position!=0) return -1;   // Must have gone through all positions, otherwise normalizedCount is not correct
+
+#else
+    extern void SPREADFUNC(unsigned char *output, unsigned char *input, int len);
+
+    unsigned char sorted_symbols[tableSize];
+
+    for (s=0; s<nbSymbols; s++)
+    {
+        if(normalizedCounter[s] > 0) {
+            memset(sorted_symbols + position, s, normalizedCounter[s]);
+            position += normalizedCounter[s];
+        }
+    }
+
+    SPREADFUNC((unsigned char *)tableSymbolByte, sorted_symbols, tableSize);
+
+#endif
 
     return 0;
 }
