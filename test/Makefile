@@ -26,8 +26,7 @@
 RELEASE=v0.1
 DESTDIR=
 CC=gcc
-CFLAGS=-I.. -std=c99 -Wall -W -Wundef -DSPREADFUNC=custom_spread 
-#CFLAGS=-I.. -std=c99 -Wall -W -Wundef
+CFLAGS=-I.. -std=c99 -Wall -W -Wundef
 CF32=-m32 -march=pentiumpro
 
 # Define *.exe as extension for Windows systems
@@ -38,12 +37,15 @@ EXT =
 endif
 
 
-default: fse
+default: fse_custom
 
-all: fse fse32 fuzzer probagen
+all: fse fse32 fuzzer probagen fse_custom
 
-fse: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c custom_spread.c ../fse.c
+fse: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c ../fse.c
 	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
+
+fse_custom: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c custom_spread.c ../fse.c
+	$(CC) -O3 -DSPREADFUNC=custom_spread $(CFLAGS) $^ -o $@$(EXT)
 
 fse32: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c ../fse.c
 	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT) $(CF32)
@@ -55,6 +57,6 @@ probagen: probaGenerator.c
 	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
 
 clean:
-	@rm -f core *.o fse$(EXT) fse32$(EXT) fuzzer$(EXT) probagen$(EXT)
+	@rm -f core *.o fse$(EXT) fse32$(EXT) fuzzer$(EXT) probagen$(EXT) fse_custom$(EXT)
 	@echo Cleaning completed
 
