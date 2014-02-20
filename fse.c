@@ -426,11 +426,12 @@ int FSE_spreadSymbols8(BYTE* tableSymbolByte, const unsigned int* normalizedCoun
 {
     int s;
     const int tableSize = 1 << tableLog;
-    const int step = FSE_TABLESTEP(tableSize);
-    const int tableMask = tableSize - 1;
     U32 position = 0;
 
 #if !defined(SPREADFUNC)
+
+    const int step = FSE_TABLESTEP(tableSize);
+    const int tableMask = tableSize - 1;
 
     // Spread symbols
     for (s=0; s<nbSymbols; s++)
