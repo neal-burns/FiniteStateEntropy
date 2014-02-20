@@ -1,6 +1,6 @@
 #include <string.h>
 
-void custom_spread(unsigned char *output, unsigned char *input, int len)
+void custom_spread(unsigned char *output, unsigned char *sorted_symbols, int len)
 {
-    memcpy(output, input, len);
+    memcpy(output, sorted_symbols, len);
 }
