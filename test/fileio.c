@@ -347,8 +347,9 @@ int compress_file(char* output_filename, char* input_filename)
 
                   int sym;
                   for(sym=0; sym<256; sym++) {
-                    if(stats_block_symbol_bits[i] > 0) {
-                      fprintf(stderr, "S[%3d] -> %
+                    if(stats_block_symbol_bits[sym] > 0) {
+                        double symbytes = (double)stats_block_symbol_bits[sym] / 8.0;
+                      fprintf(stderr, "S[%3d] -> %8.3f (bytes) %8.3f (bytes/sym) %8d (count)\n", sym, symbytes, symbytes/ stats_block_symbol_count[sym], stats_block_symbol_count[sym]);
                     }
                   }
                 }

@@ -696,12 +696,13 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     nbSymbols = errorCode;
 
     int i;
-    stats_block_entropy = log2(sourceSize) * sourceSize;
+    stats_block_entropy = 0.0;
     for(i=0; i<nbSymbols; i++) {
         if(counting[i] > 0) {
-            stats_block_entropy -= log2(counting[i]) * counting[i];
+            stats_block_entropy += log2(counting[i]) * counting[i];
         }
     }
+    stats_block_entropy = log2(sourceSize) * sourceSize - stats_block_entropy;
     memcpy(stats_block_symbol_count, counting, sizeof(counting));
 
     errorCode = FSE_normalizeCount (counting, tableLog, counting, sourceSize, nbSymbols);
@@ -709,12 +710,13 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     if (errorCode==0) return FSE_writeSingleChar (ostart, *istart);
     tableLog = errorCode;
 
-    stats_block_normalized_entropy = tableLog * sourceSize;
+    stats_block_normalized_entropy = 0.0;
     for(i=0; i<nbSymbols; i++) {
         if(counting[i] > 0) {
-            stats_block_normalized_entropy -= log2(counting[i]) * stats_block_symbol_count[i];
+            stats_block_normalized_entropy += log2(counting[i]) * stats_block_symbol_count[i];
         }
     }
+    stats_block_normalized_entropy = tableLog * sourceSize - stats_block_normalized_entropy;
 
     // Write table description header
     errorCode = FSE_writeHeader (op, counting, nbSymbols, tableLog);
