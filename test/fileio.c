@@ -314,6 +314,9 @@ int compress_file(char* output_filename, char* input_filename)
         extern int stats_block_overhead_bytes;
         extern int stats_block_uncompressed_size;
         extern double stats_block_entropy;
+        extern double stats_block_normalized_entropy;
+        extern U32 stats_block_symbol_bits[256];
+        extern U32 stats_block_symbol_count[256];
 
         // Compress Blocks
         {
@@ -330,15 +333,25 @@ int compress_file(char* output_filename, char* input_filename)
                 stats_block_overhead_bytes = 0;
                 stats_block_uncompressed_size = 0;
                 stats_block_entropy = 0.0;
+                stats_block_normalized_entropy = 0.0;
+                memset(stats_block_symbol_bits, 0, sizeof(stats_block_symbol_bits));
 
                 errorCode = compressionFunction(op, (unsigned char*)ip, (int)inputBlockSize);
                 if (errorCode==-1) EXM_THROW(22, "Compression error");
                 op += errorCode;
                 ip += inputBlockSize;
 
-                fputs("Block stats:", stderr);
-                fprintf(stderr, "%d -> %d head + %d data\n", stats_block_uncompressed_size, stats_block_overhead_bytes, stats_block_data_bytes);
-                fprintf(stderr, "ideal = %.2f bytes\n", stats_block_entropy/8.0);
+                if(stats_block_uncompressed_size > 0) {
+                  fprintf(stderr, "Block (%5d) -> %5d (head) + %5d (data)", stats_block_uncompressed_size, stats_block_overhead_bytes, stats_block_data_bytes);
+                  fprintf(stderr, "\tideal: %6.0f (orig) /%6.0f (norm)\n", stats_block_entropy/8.0, stats_block_normalized_entropy/8.0);
+
+                  int sym;
+                  for(sym=0; sym<256; sym++) {
+                    if(stats_block_symbol_bits[i] > 0) {
+                      fprintf(stderr, "S[%3d] -> %
+                    }
+                  }
+                }
             }
             if (((nbFullBlocks * inputBlockSize) < inSize) || (!inSize))  // last Block
             {

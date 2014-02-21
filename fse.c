@@ -60,6 +60,7 @@
 #include <stddef.h>    // ptrdiff_t
 #include <string.h>    // memcpy, memset
 #include <stdio.h>     // printf (debug)
+#include <math.h>
 
 
 //****************************************************************
@@ -535,6 +536,8 @@ void* FSE_initCompressionStream(void** op, ptrdiff_t* state, const void** symbol
     return start;
 }
 
+U32 stats_block_symbol_bits[FSE_MAX_NB_SYMBOLS];
+U32 stats_block_symbol_count[FSE_MAX_NB_SYMBOLS];
 
 void FSE_encodeByte(ptrdiff_t* state, bitContainer_forward_t* bitC, BYTE symbol, const void* CTable1, const void* CTable2)
 {
@@ -544,6 +547,8 @@ void FSE_encodeByte(ptrdiff_t* state, bitContainer_forward_t* bitC, BYTE symbol,
     nbBitsOut -= (int)((symbolTT[symbol].maxState - *state) >> 31);
     FSE_addBits(bitC, *state, nbBitsOut);
     *state = stateTable[ (*state>>nbBitsOut) + symbolTT[symbol].deltaFindState];
+
+    stats_block_symbol_bits[symbol] += nbBitsOut;
 }
 
 
@@ -664,6 +669,7 @@ int stats_block_data_bytes;
 int stats_block_overhead_bytes;
 int stats_block_uncompressed_size;
 double stats_block_entropy;
+double stats_block_normalized_entropy;
 
 int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int nbSymbols, int tableLog)
 {
@@ -674,6 +680,7 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     BYTE* op = ostart;
 
     U32   counting[FSE_MAX_NB_SYMBOLS_CHAR];
+    //U32   orig_counts[FSE_MAX_NB_SYMBOLS_CHAR];
     CTable_max_t CTable;
     int errorCode;
 
@@ -689,16 +696,25 @@ int FSE_compress2 (void* dest, const unsigned char* source, int sourceSize, int 
     nbSymbols = errorCode;
 
     int i;
+    stats_block_entropy = log2(sourceSize) * sourceSize;
     for(i=0; i<nbSymbols; i++) {
         if(counting[i] > 0) {
-            stats_block_entropy += log2((double)sourceSize / (double)counting[i]) * counting[i];
+            stats_block_entropy -= log2(counting[i]) * counting[i];
         }
     }
+    memcpy(stats_block_symbol_count, counting, sizeof(counting));
 
     errorCode = FSE_normalizeCount (counting, tableLog, counting, sourceSize, nbSymbols);
     if (errorCode==-1) return -1;
     if (errorCode==0) return FSE_writeSingleChar (ostart, *istart);
     tableLog = errorCode;
+
+    stats_block_normalized_entropy = tableLog * sourceSize;
+    for(i=0; i<nbSymbols; i++) {
+        if(counting[i] > 0) {
+            stats_block_normalized_entropy -= log2(counting[i]) * stats_block_symbol_count[i];
+        }
+    }
 
     // Write table description header
     errorCode = FSE_writeHeader (op, counting, nbSymbols, tableLog);

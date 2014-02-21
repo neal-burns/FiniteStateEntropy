@@ -26,7 +26,8 @@
 RELEASE=v0.1
 DESTDIR=
 CC=gcc
-CFLAGS=-I.. -std=c99 -Wall -W -Wundef
+CFLAGS=-I.. -std=c99 -Wall -W -Wundef -O3
+LDFLAGS=-lm
 CF32=-m32 -march=pentiumpro
 
 # Define *.exe as extension for Windows systems
@@ -37,24 +38,29 @@ EXT =
 endif
 
 
-default: fse_custom
+default: fse fse_custom
 
-all: fse fse32 fuzzer probagen fse_custom
+all: default fse32 fuzzer probagen
 
-fse: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c ../fse.c
-	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
+fse: bench.o commandline.o fileio.o lz4hce.o xxhash.o fseDist.o fse2t.o zlibh.o ../fse.o
+	$(CC) $(LDFLAGS) $^ -o $@$(EXT)
 
-fse_custom: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c custom_spread.c ../fse.c
-	$(CC) -O3 -DSPREADFUNC=custom_spread $(CFLAGS) $^ -o $@$(EXT)
+fse_custom.o: CFLAGS+=-DSPREADFUNC=custom_spread
+ 
+fse.o fse_custom.o: ../fse.c ../fse.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+fse_custom: bench.o commandline.o fileio.o lz4hce.o xxhash.o fseDist.o fse2t.o zlibh.o custom_spread.o fse_custom.o
+	$(CC) $(LDFLAGS) $^ -o $@$(EXT)
 
 fse32: bench.c commandline.c fileio.c lz4hce.c xxhash.c fseDist.c fse2t.c zlibh.c ../fse.c
-	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT) $(CF32)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@$(EXT) $(CF32)
 
-fuzzer: fuzzer.c xxhash.c ../fse.c
-	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
+fuzzer: fuzzer.o xxhash.o ../fse.o
+	$(CC) $(LDFLAGS) $^ -o $@$(EXT)
 
-probagen: probaGenerator.c
-	$(CC) -O3 $(CFLAGS) $^ -o $@$(EXT)
+probagen: probaGenerator.o
+	$(CC) $(LDFLAGS) $^ -o $@$(EXT)
 
 clean:
 	@rm -f core *.o fse$(EXT) fse32$(EXT) fuzzer$(EXT) probagen$(EXT) fse_custom$(EXT)
