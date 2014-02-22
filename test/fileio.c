@@ -242,6 +242,25 @@ int get_fileHandle(char* input_filename, char* output_filename, FILE** pfinput, 
     return 0;
 }
 
+extern int stats_block_data_bytes;
+extern int stats_block_overhead_bytes;
+extern int stats_block_uncompressed_size;
+extern double stats_block_entropy;
+extern double stats_block_normalized_entropy;
+extern U32 stats_block_symbol_bits[256];
+extern U32 stats_block_symbol_count[256];
+
+void print_block_symbol_stats_table()
+{
+    int sym;
+    for(sym=0; sym<256; sym++) {
+        if(stats_block_symbol_bits[sym] > 0) {
+            double symbytes = (double)stats_block_symbol_bits[sym] / 8.0;
+            fprintf(stderr, "S[%3d] -> %8.3f (bytes) %8.3f (bytes/sym) %8d (count)\n", sym, symbytes,
+                symbytes / stats_block_symbol_count[sym], stats_block_symbol_count[sym]);
+        }
+    }
+}
 
 /*
 Compression format :
@@ -310,14 +329,6 @@ int compress_file(char* output_filename, char* input_filename)
         XXH32_update(hashCtx, in_buff, (int)inSize);
         DISPLAYLEVEL(3, "\rRead : %i MB   ", (int)(filesize>>20));
 
-        extern int stats_block_data_bytes;
-        extern int stats_block_overhead_bytes;
-        extern int stats_block_uncompressed_size;
-        extern double stats_block_entropy;
-        extern double stats_block_normalized_entropy;
-        extern U32 stats_block_symbol_bits[256];
-        extern U32 stats_block_symbol_count[256];
-
         // Compress Blocks
         {
             const char* ip = in_buff;
@@ -345,13 +356,7 @@ int compress_file(char* output_filename, char* input_filename)
                   fprintf(stderr, "Block (%5d) -> %5d (head) + %5d (data)", stats_block_uncompressed_size, stats_block_overhead_bytes, stats_block_data_bytes);
                   fprintf(stderr, "\tideal: %6.0f (orig) /%6.0f (norm)\n", stats_block_entropy/8.0, stats_block_normalized_entropy/8.0);
 
-                  int sym;
-                  for(sym=0; sym<256; sym++) {
-                    if(stats_block_symbol_bits[sym] > 0) {
-                        double symbytes = (double)stats_block_symbol_bits[sym] / 8.0;
-                      fprintf(stderr, "S[%3d] -> %8.3f (bytes) %8.3f (bytes/sym) %8d (count)\n", sym, symbytes, symbytes/ stats_block_symbol_count[sym], stats_block_symbol_count[sym]);
-                    }
-                  }
+                  print_block_symbol_stats_table();
                 }
             }
             if (((nbFullBlocks * inputBlockSize) < inSize) || (!inSize))  // last Block

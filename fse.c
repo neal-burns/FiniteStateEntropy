@@ -546,9 +546,12 @@ void FSE_encodeByte(ptrdiff_t* state, bitContainer_forward_t* bitC, BYTE symbol,
     int nbBitsOut  = symbolTT[symbol].minBitsOut;
     nbBitsOut -= (int)((symbolTT[symbol].maxState - *state) >> 31);
     FSE_addBits(bitC, *state, nbBitsOut);
-    *state = stateTable[ (*state>>nbBitsOut) + symbolTT[symbol].deltaFindState];
+    //*state = stateTable[ (*state>>nbBitsOut) + symbolTT[symbol].deltaFindState];
+    ptrdiff_t dest_state = stateTable[ (*state>>nbBitsOut) + symbolTT[symbol].deltaFindState];
 
-    stats_block_symbol_bits[symbol] += nbBitsOut;
+    stats_block_symbol_bits[symbol] += nbBitsOut + log2(dest_state) - log2(*state);
+
+    *state = dest_state;
 }
 
 
